@@ -1,0 +1,74 @@
+/* 선생님 화면·학생 화면 공용 스타일 */
+:root{
+  --bg:#0f1226; --bg2:#181c3a; --panel:#1f2448; --line:#343a6e;
+  --text:#f3f4ff; --muted:#a6abd6; --accent:#ffd23f; --good:#2ee59d; --bad:#ff4d6d; --cell:#262c58;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:radial-gradient(1200px 600px at 20% -10%,#2a2f6b 0,transparent 60%),
+             radial-gradient(900px 500px at 110% 110%,#3b1d5c 0,transparent 60%),var(--bg);
+  background-attachment:fixed;
+  color:var(--text);font-family:'Noto Sans KR',system-ui,sans-serif;overflow-x:hidden;
+}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+input{font:inherit}
+.hidden{display:none!important}
+.tf{font-family:'Black Han Sans','Noto Sans KR',sans-serif;font-weight:400}
+.muted{color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px}
+.grad{background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg2);padding:10px 16px;border-radius:999px;border:2px solid transparent;font-weight:700}
+.chip.on{border-color:var(--accent);background:#3a3410;color:var(--accent)}
+.big-btn{display:block;width:100%;padding:18px;border-radius:16px;font-size:24px;
+  background:linear-gradient(90deg,#ffd23f,#ff9f1c);color:#1a1300;font-family:'Black Han Sans',sans-serif;box-shadow:0 6px 0 #a45f00}
+.big-btn:active{transform:translateY(4px);box-shadow:0 2px 0 #a45f00}
+.big-btn:disabled{opacity:.4;cursor:not-allowed}
+.btn{padding:12px 16px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);font-weight:700}
+.btn:hover{border-color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:#1a1300;border:0}
+.field{width:100%;padding:14px 16px;font-size:20px;border-radius:14px;border:2px solid var(--line);background:#0c0f20;color:var(--text)}
+.field:focus{outline:none;border-color:var(--accent)}
+
+/* 문제 카드 */
+.qcard{position:relative;overflow:hidden}
+.qcard.correct{border-color:var(--good);box-shadow:0 0 0 3px #2ee59d55}
+.qcard.wrong{border-color:var(--bad);box-shadow:0 0 0 3px #ff4d6d55}
+.topic{display:inline-block;background:#2b3270;color:#c7ccff;font-size:13px;padding:4px 10px;border-radius:999px}
+.timer{position:absolute;top:16px;right:16px;width:58px;height:58px}
+.timer svg{transform:rotate(-90deg)}
+.timer span{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:20px}
+.timer.urgent span{color:var(--bad);animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.25)}}
+.chosung{font-family:'Black Han Sans',sans-serif;color:var(--accent);text-shadow:0 4px 0 #0006;padding-right:64px;
+  font-size:clamp(40px,7vw,72px);letter-spacing:8px;margin:12px 0 4px}
+.chosung.long{font-size:clamp(30px,4.5vw,48px);letter-spacing:2px}
+.desc{font-size:clamp(18px,2.2vw,24px);line-height:1.55;font-weight:700}
+.hint{margin-top:8px;color:var(--muted);font-size:16px;min-height:1.4em}
+.reveal{margin-top:8px;font-size:26px;font-family:'Black Han Sans',sans-serif;min-height:1.2em}
+.reveal.good{color:var(--good)} .reveal.bad{color:var(--bad)}
+
+/* 빙고판 */
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cell{aspect-ratio:1;background:var(--cell);border-radius:10px;display:grid;place-items:center;text-align:center;
+  font-size:clamp(11px,3.2vw,15px);font-weight:700;padding:3px;line-height:1.2;position:relative;word-break:keep-all;overflow:hidden}
+.cell.marked{background:var(--accent);color:#111}
+.cell.marked::after{content:'';position:absolute;inset:14%;border:4px solid #0007;border-radius:50%}
+.cell.inline{background:var(--good);box-shadow:inset 0 0 0 3px #fff}
+.cell.pop{animation:stamp .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{0%{transform:scale(2.2) rotate(-20deg);opacity:0}100%{transform:none;opacity:1}}
+.dots{display:inline-flex;gap:4px;vertical-align:middle}
+.dots i{width:16px;height:16px;border-radius:5px;background:var(--bg2);border:1px solid var(--line)}
+.dots i.on{background:var(--good);border-color:var(--good);box-shadow:0 0 8px var(--good)}
+
+/* 우승 오버레이 */
+.overlay{position:fixed;inset:0;background:#05061ad9;display:grid;place-items:center;z-index:40;padding:16px}
+.overlay .box{text-align:center;background:var(--panel);border:3px solid var(--accent);border-radius:28px;padding:30px 24px;max-width:620px;width:100%;max-height:92vh;overflow:auto}
+.trophy{font-size:100px;animation:bounce 1s infinite alternate;display:inline-block}
+@keyframes bounce{to{transform:translateY(-14px) rotate(6deg)}}
+.win-name{font-family:'Black Han Sans',sans-serif;font-size:clamp(38px,8vw,76px);margin:6px 0;color:var(--accent);font-weight:400}
+.rank-list{list-style:none;padding:0;margin:16px 0;text-align:left}
+.rank-list li{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:10px;background:var(--bg2);margin-bottom:6px;font-weight:700}
