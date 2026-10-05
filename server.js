@@ -17,6 +17,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 const MAX_PLAYERS = 60;
+const PODIUM = 3; // 1·2·3등까지 시상
 
 /* ================= 게임 로직 ================= */
 const LINES = (() => {
@@ -70,7 +71,7 @@ function createRoom(settings) {
     qNo: 0,
     cur: null, // { id, hint, endsAt, answers: Map(pid -> 'correct'|'wrong') }
     timer: null,
-    winner: null,
+    winners: [], // [{ id, name, place, at }] 줄 수를 먼저 채운 순서
     lastActive: Date.now(),
   };
   rooms.set(code, room);
@@ -84,7 +85,7 @@ function clampInt(v, lo, hi, def) {
 function startGame(room) {
   room.deck = shuffle(WORDS.map((_, i) => i));
   room.qNo = 0;
-  room.winner = null;
+  room.winners = [];
   nextQuestion(room);
 }
 function nextQuestion(room) {
@@ -115,7 +116,7 @@ function resetGame(room) {
   clearTimeout(room.timer);
   room.status = 'lobby';
   room.cur = null;
-  room.winner = null;
+  room.winners = [];
   room.qNo = 0;
   for (const p of room.players.values()) {
     p.board = newBoard();
@@ -125,10 +126,12 @@ function resetGame(room) {
   }
 }
 
+// 시상자는 들어온 순서대로 맨 위, 나머지는 줄 → 지운 칸 → 맞힌 문제 수 순
 function ranking(room) {
+  const place = Object.fromEntries(room.winners.map((w) => [w.id, w.place]));
   return [...room.players.values()]
-    .map((p) => ({ id: p.id, name: p.name, lines: p.lines, marks: p.marked.size, correct: p.correct, online: p.conns.size > 0 }))
-    .sort((a, b) => b.lines - a.lines || b.marks - a.marks || b.correct - a.correct || a.name.localeCompare(b.name));
+    .map((p) => ({ id: p.id, name: p.name, lines: p.lines, marks: p.marked.size, correct: p.correct, place: place[p.id] || 0, online: p.conns.size > 0 }))
+    .sort((a, b) => (a.place || 99) - (b.place || 99) || b.lines - a.lines || b.marks - a.marks || b.correct - a.correct || a.name.localeCompare(b.name));
 }
 
 function questionView(room, withAnswer) {
@@ -160,7 +163,8 @@ function hostView(room) {
     remaining: room.status === 'lobby' ? WORDS.length : room.deck.length,
     stats: { correct, wrong, players: room.players.size },
     players: ranking(room).map((r) => ({ ...r, ans: room.cur ? room.cur.answers.get(r.id) || null : null })),
-    winner: room.winner,
+    winners: room.winners,
+    podium: PODIUM,
   };
 }
 function playerView(room, p) {
@@ -182,10 +186,13 @@ function playerView(room, p) {
       lines: p.lines,
       ans: room.cur ? room.cur.answers.get(p.id) || null : null,
       rank: rank.findIndex((r) => r.id === p.id) + 1,
+      correct: p.correct,
+      place: (room.winners.find((w) => w.id === p.id) || {}).place || 0,
     },
     players: room.players.size,
-    top: rank.slice(0, 5).map((r) => ({ name: r.name, lines: r.lines, marks: r.marks })),
-    winner: room.winner,
+    top: rank.slice(0, 5).map((r) => ({ name: r.name, lines: r.lines, marks: r.marks, correct: r.correct, place: r.place })),
+    winners: room.winners,
+    podium: PODIUM,
   };
 }
 
@@ -300,10 +307,10 @@ async function api(req, res, url) {
         const before = pl.lines;
         pl.lines = countLines(pl);
         newLines = pl.lines - before;
-        if (pl.lines >= room.settings.lines && !room.winner) {
-          room.winner = { id: pl.id, name: pl.name, lines: pl.lines, at: Date.now() };
-          won = true;
-          finish(room);
+        // 1등이 나와도 게임은 계속됩니다. 3등까지 차례로 시상하고, 남은 학생은 끝까지 풉니다.
+        if (pl.lines >= room.settings.lines && room.winners.length < PODIUM && !room.winners.some((w) => w.id === pl.id)) {
+          won = room.winners.length + 1;
+          room.winners.push({ id: pl.id, name: pl.name, place: won, at: Date.now() });
         }
       }
     }
@@ -321,6 +328,9 @@ async function api(req, res, url) {
         break;
       case 'next':
         if (room.status === 'question' || room.status === 'reveal') nextQuestion(room);
+        break;
+      case 'end':
+        finish(room);
         break;
       case 'close':
         endQuestion(room);

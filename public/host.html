@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/qrcode.js"></script>
 <style>
 header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:#0c0f20cc;position:sticky;top:0;z-index:5;backdrop-filter:blur(6px);flex-wrap:wrap}
 header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
@@ -25,8 +25,11 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
 
 /* 대기실 */
 .join-box{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
-#qr{background:#fff;padding:12px;border-radius:16px;width:max-content}
-#qr img,#qr canvas{display:block;width:220px;height:220px}
+.qrbox{background:#fff;padding:12px;border-radius:16px;width:max-content;line-height:0}
+.qrbox svg{display:block;width:240px;height:240px}
+#qrBig .qrbox svg{width:min(70vh,80vw);height:min(70vh,80vw)}
+#qrBig .box{max-width:none;width:auto}
+#qrBig .code{font-size:clamp(50px,8vw,90px)}
 .join-url{font-size:clamp(18px,2vw,24px);font-weight:900;word-break:break-all}
 .code{font-family:'Black Han Sans',sans-serif;font-size:clamp(70px,10vw,120px);letter-spacing:12px;color:var(--accent);line-height:1}
 .players{display:flex;flex-wrap:wrap;gap:8px}
@@ -49,6 +52,15 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
 .rrow.reach{box-shadow:inset 0 0 0 2px var(--accent)}
 .rrow.off .nm{opacity:.45}
 .rrow .mk{color:var(--muted);font-size:13px;text-align:right}
+.podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+.pod{border-radius:14px;padding:10px;text-align:center;background:var(--bg2);border:2px dashed var(--line)}
+.pod.on{border-style:solid}
+.pod.p1.on{border-color:#ffd23f;background:#3a3410}.pod.p2.on{border-color:#cfd6e6;background:#2c3142}.pod.p3.on{border-color:#e39a5b;background:#3b2716}
+.pod .md{font-size:30px}.pod .who{font-weight:900;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow.placed{box-shadow:inset 0 0 0 2px var(--good)}
+.final-pod{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:10px 0 4px}
+.final-pod div{flex:1;max-width:170px;border-radius:14px 14px 0 0;padding:10px 6px;font-weight:900;word-break:keep-all}
+.final-pod .md{font-size:44px;display:block}
 .reach-tag{font-size:12px;color:var(--accent);margin-left:6px}
 </style>
 </head>
@@ -76,6 +88,7 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
     <span class="pill" id="hLeft">남은 문제 30</span>
     <button class="btn" id="soundBtn" title="소리">🔊</button>
     <button class="btn" id="fullBtn" title="전체 화면">⛶</button>
+    <button class="btn primary" id="qrBtn" title="참가 QR 크게 보기">📱 QR</button>
     <button class="btn" id="newRoomBtn" title="새 방 만들기">🏠</button>
   </header>
 
@@ -84,7 +97,7 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
     <div class="panel">
       <div class="tf" style="font-size:30px;margin-bottom:14px">📱 휴대폰으로 참가하세요</div>
       <div class="join-box">
-        <div id="qr"></div>
+        <div class="qrbox" id="qr"></div>
         <div style="min-width:0;flex:1">
           <div class="muted">주소</div>
           <div class="join-url" id="joinUrl"></div>
@@ -126,18 +139,34 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
         <button class="btn" id="closeBtn">⏹ 마감</button>
         <button class="btn primary" id="nextBtn">다음 문제 ▶</button>
       </div>
+      <button class="btn" style="width:100%;margin-top:8px" id="endBtn">🏁 여기서 게임 끝내고 최종 결과 보기</button>
     </div>
     <div class="panel">
+      <div class="podium" id="podium"></div>
       <div class="tf" style="font-size:26px;margin-bottom:12px">🏁 실시간 순위</div>
       <div class="rank" id="rank"></div>
     </div>
   </div>
 </section>
 
+<!-- 등수가 나올 때마다 잠깐 뜨는 축하 화면 (게임은 계속) -->
+<div class="overlay hidden" id="placePop">
+  <div class="box">
+    <div class="trophy" id="popMedal">🥇</div>
+    <div class="win-name" id="popName"></div>
+    <div class="muted" id="popSub"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn" style="flex:1" id="popStop">🔇 음악 끄기</button>
+      <button class="btn primary" style="flex:2" id="popGo">계속 진행 ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- 최종 결과 -->
 <div class="overlay hidden" id="winner">
   <div class="box">
-    <div class="trophy">🏆</div>
-    <div class="win-name" id="winName"></div>
+    <div class="win-name" style="font-size:clamp(34px,6vw,56px)">🏆 최종 결과</div>
+    <div class="final-pod" id="finalPod"></div>
     <div class="muted" id="winSub"></div>
     <ol class="rank-list" id="winRank"></ol>
     <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -146,6 +175,22 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
       <button class="btn" style="flex:1" id="viewBtn">👀 순위 화면</button>
     </div>
     <button class="big-btn" id="againBtn">새 게임 (같은 학생들) 🔄</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="qrBig">
+  <div class="box">
+    <div class="tf" style="font-size:30px;margin-bottom:12px">📱 QR을 찍고 이름만 넣으면 입장!</div>
+    <div style="display:flex;gap:28px;align-items:center;justify-content:center;flex-wrap:wrap">
+      <div class="qrbox" id="qrLarge"></div>
+      <div style="text-align:left">
+        <div class="muted">방 번호</div>
+        <div class="code" id="qrCode"></div>
+        <div class="muted" style="margin-top:10px">주소</div>
+        <div class="join-url" id="qrUrl"></div>
+      </div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:16px" id="qrClose">닫기 ✕</button>
   </div>
 </div>
 
@@ -224,9 +269,7 @@ function renderLobby(s){
   if($('joinUrl').dataset.url !== url){
     $('joinUrl').dataset.url = url;
     $('joinUrl').textContent = `${location.host}/play.html`;
-    $('qr').innerHTML='';
-    if(window.QRCode) new QRCode($('qr'), {text:url, width:440, height:440, correctLevel:QRCode.CorrectLevel.M});
-    else $('qr').classList.add('hidden');
+    $('qr').innerHTML = qrSvg(url);
   }
   chips('lobLines', LINE_OPTS, s.settings.lines, v=>act('settings',{lines:v}));
   chips('lobTime', TIMES, s.settings.time, v=>act('settings',{time:v}));
@@ -265,10 +308,15 @@ function renderPlay(s){
   $('qcard').className = 'panel qcard' + (asking ? '' : ' correct');
   runTimer(asking && q && q.endsAt);
   const goal = s.settings.lines;
+  $('podium').innerHTML = [1,2,3].map(n=>{
+    const w = s.winners.find(x=>x.place===n);
+    return `<div class="pod p${n} ${w?'on':''}"><div class="md">${MEDAL[n]}</div><div class="who">${w?esc(w.name):'?'}</div></div>`;
+  }).join('');
+  $('endBtn').classList.toggle('hidden', s.status==='over');
   $('rank').innerHTML = s.players.map((p,i)=>`
-    <div class="rrow ${p.lines===goal-1?'reach':''} ${p.online?'':'off'}">
-      <span class="n">${i+1}</span>
-      <span class="nm">${esc(p.name)}${p.lines===goal-1?'<span class="reach-tag">리치!</span>':''}</span>
+    <div class="rrow ${!p.place&&p.lines===goal-1?'reach':''} ${p.place?'placed':''} ${p.online?'':'off'}">
+      <span class="n">${p.place?MEDAL[p.place]:i+1}</span>
+      <span class="nm">${esc(p.name)}${!p.place&&p.lines===goal-1?'<span class="reach-tag">리치!</span>':''}<span class="reach-tag" style="color:var(--muted)">정답 ${p.correct}</span></span>
       <span class="dots">${Array.from({length:goal},(_,k)=>`<i class="${k<p.lines?'on':''}"></i>`).join('')}</span>
       <span class="mk">${p.marks}칸</span>
       <span>${p.ans==='correct'?'⭕':p.ans==='wrong'?'💥':asking?'⏳':''}</span>
@@ -298,7 +346,7 @@ function runTimer(endsAt){
 function detectEvents(a, b){
   if(!a) return;
   if(b.status==='lobby' && b.players.length > a.players.length) FX.sfx.join();
-  if(a.status==='question' && b.status!=='question' && !b.winner){
+  if(a.status==='question' && b.status==='reveal'){
     if(b.stats.correct) { FX.fireworks(3); FX.sfx.win(); }
     else { FX.bomb(); FX.say('아무도 못 맞혔어요!','#ff4d6d'); }
   }
@@ -306,26 +354,40 @@ function detectEvents(a, b){
   if(b.status==='question' && b.stats.correct > (a.q && b.q && a.q.no===b.q.no ? a.stats.correct : 0)) FX.sfx.pop();
   const before = Object.fromEntries(a.players.map(p=>[p.id,p.lines]));
   const ups = b.players.filter(p=>p.lines > (before[p.id]||0));
-  if(ups.length && !b.winner) FX.say(ups.length===1 ? `${ups[0].name} ${ups[0].lines}줄!` : `${ups.length}명 줄 완성!`, '#2ee59d');
+  const newPlaces = b.winners.filter(w=>!a.winners.some(x=>x.id===w.id));
+  if(newPlaces.length) return showPlace(newPlaces[newPlaces.length-1], b);
+  if(ups.length) FX.say(ups.length===1 ? `${ups[0].name} ${ups[0].lines}줄!` : `${ups.length}명 줄 완성!`, '#2ee59d');
 }
 
+const MEDAL = {1:'🥇',2:'🥈',3:'🥉'};
+let popTimer = null;
+// 1·2·3등이 나올 때마다: 음악 + 폭죽 + 잠깐 축하 화면, 게임은 계속 진행
+function showPlace(w, s){
+  $('popMedal').textContent = MEDAL[w.place];
+  $('popName').textContent = `${w.name} ${w.place}등!`;
+  const left = s.podium - s.winners.length;
+  $('popSub').textContent = left>0 ? `${s.settings.lines}줄 빙고 달성! 아직 ${left}자리가 남았어요. 나머지 학생은 계속 풀어요` : `시상대가 다 찼어요! 나머지 학생은 남은 문제를 끝까지 풀어 봐요`;
+  $('placePop').classList.remove('hidden');
+  celebrate();
+  clearTimeout(popTimer);
+  popTimer = setTimeout(()=>$('placePop').classList.add('hidden'), 9000);
+}
 function renderWinner(s){
   const show = s.status==='over';
-  if(!show){ $('winner').classList.add('hidden'); winnerShownFor=null; FX.stopMusic(); return; }
-  const key = s.winner ? s.winner.id+s.winner.at : 'none';
-  $('winRank').innerHTML = s.players.slice(0,5).map((p,i)=>`<li><span>${['🥇','🥈','🥉','4','5'][i]} ${esc(p.name)}</span><span>${p.lines}줄 · ${p.marks}칸</span></li>`).join('');
-  if(winnerShownFor===key) return;
-  winnerShownFor = key;
+  if(!show){ $('winner').classList.add('hidden'); winnerShownFor=null; if(s.status==='lobby'){ FX.stopMusic(); $('placePop').classList.add('hidden'); } return; }
+  const order = [2,1,3], heights = {1:150,2:110,3:80}, colors = {1:'#3a3410',2:'#2c3142',3:'#3b2716'};
+  $('finalPod').innerHTML = order.map(n=>{
+    const w = s.winners.find(x=>x.place===n);
+    return `<div style="height:${heights[n]+60}px;background:${colors[n]}"><span class="md">${MEDAL[n]}</span>${w?esc(w.name):'-'}</div>`;
+  }).join('');
+  const rest = s.players.filter(p=>!p.place);
+  $('winSub').textContent = s.winners.length ? `${s.settings.lines}줄 빙고를 먼저 완성한 순서입니다` : `${s.settings.lines}줄을 채운 학생이 없어 시상대가 비었어요`;
+  $('winRank').innerHTML = rest.slice(0,7).map((p,i)=>`<li><span>${s.winners.length+i+1}. ${esc(p.name)}</span><span>${p.lines}줄 · ${p.marks}칸 · 정답 ${p.correct}</span></li>`).join('');
+  if(winnerShownFor==='over') return;
+  winnerShownFor = 'over';
+  $('placePop').classList.add('hidden');
   $('winner').classList.remove('hidden');
-  if(s.winner){
-    $('winName').textContent = `${s.winner.name} 우승!`;
-    $('winSub').textContent = `가장 먼저 ${s.settings.lines}줄 빙고를 완성했어요`;
-    celebrate();
-  } else {
-    $('winName').textContent = '게임 끝!';
-    $('winSub').textContent = `문제가 모두 나왔어요. ${s.settings.lines}줄을 채운 사람이 없어서 순위로 정합니다`;
-    FX.fireworks(6); FX.sfx.bingo();
-  }
+  FX.fireworks(8); FX.sfx.bingo();
 }
 let celebIv = null;
 function celebrate(){
@@ -343,9 +405,28 @@ $('hintBtn').onclick = ()=> act('hint');
 $('againBtn').onclick = ()=>{ if(confirm('같은 학생들로 새 게임을 할까요? 빙고판이 새로 섞입니다.')){ FX.stopMusic(); clearInterval(celebIv); act('restart'); } };
 $('musicBtn').onclick = ()=> celebrate();
 $('stopBtn').onclick = ()=>{ FX.stopMusic(); clearInterval(celebIv); };
+$('endBtn').onclick = ()=>{ if(confirm('여기서 게임을 끝내고 최종 결과를 볼까요?')) act('end'); };
+$('popGo').onclick = ()=>{ clearTimeout(popTimer); $('placePop').classList.add('hidden'); };
+$('popStop').onclick = ()=>{ FX.stopMusic(); clearInterval(celebIv); };
 $('viewBtn').onclick = ()=> $('winner').classList.add('hidden');
 $('soundBtn').onclick = ()=>{ FX.soundOn = !FX.soundOn; $('soundBtn').textContent = FX.soundOn?'🔊':'🔇'; };
 $('fullBtn').onclick = ()=>{ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); };
+
+// 학생 참가 주소(방 번호 포함)를 QR로 만듭니다. 라이브러리는 앱에 들어 있어 인터넷이 막혀도 됩니다.
+function joinUrl(){ return `${location.origin}/play.html?code=${S.code}`; }
+function qrSvg(text){
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  return q.createSvgTag({cellSize:8, margin:2, scalable:true});
+}
+$('qrBtn').onclick = ()=>{
+  if(!S) return;
+  $('qrLarge').innerHTML = qrSvg(joinUrl());
+  $('qrCode').textContent = S.code;
+  $('qrUrl').textContent = `${location.host}/play.html`;
+  $('qrBig').classList.remove('hidden');
+};
+$('qrClose').onclick = ()=> $('qrBig').classList.add('hidden');
+$('qrBig').onclick = e=>{ if(e.target.id==='qrBig') $('qrBig').classList.add('hidden'); };
 
 $('newRoomBtn').onclick = ()=>{
   if(!confirm('지금 방을 닫고 새 방을 만들까요? 학생들은 새 방 번호로 다시 들어와야 합니다.')) return;
