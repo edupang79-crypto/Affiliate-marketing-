@@ -197,7 +197,7 @@ function render(s){
     lastQ = q.no;
     $('qTopic').textContent = q.topic;
     $('qChosung').textContent = q.chosung;
-    $('qChosung').classList.toggle('long', q.eng);
+    $('qChosung').classList.toggle('long', q.eng || q.chosung.length > 8);
     $('qDesc').textContent = q.desc;
     $('qHint').textContent = q.hint ? `💡 힌트: ${q.hint}` : '';
     const answered = s.me.ans;

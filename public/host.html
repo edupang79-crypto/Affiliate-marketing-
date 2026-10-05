@@ -291,7 +291,7 @@ function renderPlay(s){
     $('qTopic').textContent = q.topic;
     $('qNo').textContent = `${q.no}번째 문제`;
     $('qChosung').textContent = q.chosung;
-    $('qChosung').classList.toggle('long', q.eng);
+    $('qChosung').classList.toggle('long', q.eng || q.chosung.length > 8);
     $('qDesc').textContent = q.desc;
     $('qHint').textContent = q.hint ? `💡 힌트: ${q.hint}` : '';
     if(q.answer){ $('qReveal').className='reveal good'; $('qReveal').textContent = `정답은 「${q.answer}」`; }

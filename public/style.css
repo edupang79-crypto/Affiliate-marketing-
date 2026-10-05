@@ -43,7 +43,7 @@ input{font:inherit}
 .timer span{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:20px}
 .timer.urgent span{color:var(--bad);animation:pulse .5s infinite alternate}
 @keyframes pulse{to{transform:scale(1.25)}}
-.chosung{font-family:'Black Han Sans',sans-serif;color:var(--accent);text-shadow:0 4px 0 #0006;padding-right:64px;
+.chosung{word-break:keep-all;font-family:'Black Han Sans',sans-serif;color:var(--accent);text-shadow:0 4px 0 #0006;padding-right:64px;
   font-size:clamp(40px,7vw,72px);letter-spacing:8px;margin:12px 0 4px}
 .chosung.long{font-size:clamp(30px,4.5vw,48px);letter-spacing:2px}
 .desc{font-size:clamp(18px,2.2vw,24px);line-height:1.55;font-weight:700}
