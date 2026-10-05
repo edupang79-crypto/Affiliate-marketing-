@@ -61,6 +61,12 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
 .final-pod{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:10px 0 4px}
 .final-pod div{flex:1;max-width:170px;border-radius:14px 14px 0 0;padding:10px 6px;font-weight:900;word-break:keep-all}
 .final-pod .md{font-size:44px;display:block}
+.rv{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:14px;align-items:center;background:var(--bg2);border-radius:14px;padding:14px 16px;margin-bottom:8px}
+.rv .w{font-family:'Black Han Sans',sans-serif;font-size:28px;color:var(--accent)}
+.rv .d{font-weight:700;line-height:1.5;margin-top:2px}
+.rv .rate{text-align:right;font-weight:900;font-size:22px}
+.rv .bar{height:8px;border-radius:99px;background:var(--line);margin-top:6px;overflow:hidden}
+.rv .bar i{display:block;height:100%;background:var(--good)}
 .reach-tag{font-size:12px;color:var(--accent);margin-left:6px}
 </style>
 </head>
@@ -162,6 +168,16 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
   </div>
 </div>
 
+<!-- 반 전체가 가장 많이 틀린 단어 -->
+<div class="overlay hidden" id="review">
+  <div class="box" style="max-width:900px;text-align:left">
+    <div class="win-name" style="font-size:clamp(30px,5vw,48px);text-align:center">📌 다시 짚어 볼 단어</div>
+    <div class="muted" style="text-align:center;margin-bottom:10px">정답률이 낮은 순서입니다. 학생들 휴대폰에는 각자의 오답 노트가 떠 있어요</div>
+    <div id="reviewList"></div>
+    <button class="btn primary" style="width:100%;margin-top:12px" id="reviewClose">결과 화면으로 ◀</button>
+  </div>
+</div>
+
 <!-- 최종 결과 -->
 <div class="overlay hidden" id="winner">
   <div class="box">
@@ -169,6 +185,7 @@ header h1{margin:0;font-size:24px;flex:1;white-space:nowrap}
     <div class="final-pod" id="finalPod"></div>
     <div class="muted" id="winSub"></div>
     <ol class="rank-list" id="winRank"></ol>
+    <button class="big-btn" style="margin-bottom:10px;font-size:22px;background:linear-gradient(90deg,#7ad7ff,#c9a2ff);box-shadow:0 6px 0 #5a4a9a" id="reviewBtn">📌 반 전체 복습할 단어 보기</button>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn" style="flex:1" id="musicBtn">🎵 음악 다시</button>
       <button class="btn" style="flex:1" id="stopBtn">🔇 음악 끄기</button>
@@ -374,7 +391,7 @@ function showPlace(w, s){
 }
 function renderWinner(s){
   const show = s.status==='over';
-  if(!show){ $('winner').classList.add('hidden'); winnerShownFor=null; if(s.status==='lobby'){ FX.stopMusic(); $('placePop').classList.add('hidden'); } return; }
+  if(!show){ $('winner').classList.add('hidden'); $('review').classList.add('hidden'); winnerShownFor=null; if(s.status==='lobby'){ FX.stopMusic(); $('placePop').classList.add('hidden'); } return; }
   const order = [2,1,3], heights = {1:150,2:110,3:80}, colors = {1:'#3a3410',2:'#2c3142',3:'#3b2716'};
   $('finalPod').innerHTML = order.map(n=>{
     const w = s.winners.find(x=>x.place===n);
@@ -405,6 +422,16 @@ $('hintBtn').onclick = ()=> act('hint');
 $('againBtn').onclick = ()=>{ if(confirm('같은 학생들로 새 게임을 할까요? 빙고판이 새로 섞입니다.')){ FX.stopMusic(); clearInterval(celebIv); act('restart'); } };
 $('musicBtn').onclick = ()=> celebrate();
 $('stopBtn').onclick = ()=>{ FX.stopMusic(); clearInterval(celebIv); };
+$('reviewBtn').onclick = ()=>{
+  const list = S.hardest || [];
+  $('reviewList').innerHTML = list.length ? list.map(h=>{
+    const pct = Math.round(h.correct/h.total*100);
+    return `<div class="rv"><div><div class="w">${esc(h.word)}</div><div class="d">${esc(h.desc)}</div></div>
+      <div class="rate">${pct}%<div class="muted" style="font-size:13px;font-weight:700">${h.correct}/${h.total}명 정답</div><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
+  }).join('') : '<p class="muted" style="text-align:center">출제된 문제가 없어요</p>';
+  $('winner').classList.add('hidden'); $('review').classList.remove('hidden');
+};
+$('reviewClose').onclick = ()=>{ $('review').classList.add('hidden'); $('winner').classList.remove('hidden'); };
 $('endBtn').onclick = ()=>{ if(confirm('여기서 게임을 끝내고 최종 결과를 볼까요?')) act('end'); };
 $('popGo').onclick = ()=>{ clearTimeout(popTimer); $('placePop').classList.add('hidden'); };
 $('popStop').onclick = ()=>{ FX.stopMusic(); clearInterval(celebIv); };

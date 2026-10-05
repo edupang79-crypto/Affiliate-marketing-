@@ -72,6 +72,7 @@ function createRoom(settings) {
     cur: null, // { id, hint, endsAt, answers: Map(pid -> 'correct'|'wrong') }
     timer: null,
     winners: [], // [{ id, name, place, at }] 줄 수를 먼저 채운 순서
+    history: [], // 출제한 문제 기록 (오답 노트용)
     lastActive: Date.now(),
   };
   rooms.set(code, room);
@@ -86,6 +87,7 @@ function startGame(room) {
   room.deck = shuffle(WORDS.map((_, i) => i));
   room.qNo = 0;
   room.winners = [];
+  room.history = [];
   nextQuestion(room);
 }
 function nextQuestion(room) {
@@ -99,7 +101,10 @@ function nextQuestion(room) {
     hint: 0,
     endsAt: room.settings.time ? Date.now() + room.settings.time * 1000 : null,
     answers: new Map(),
+    texts: new Map(), // pid -> 오답으로 쓴 글
+    pids: new Set(room.players.keys()), // 출제 당시 참가자 (늦게 온 학생은 지난 문제가 오답 노트에 안 들어감)
   };
+  room.history.push(room.cur);
   if (room.cur.endsAt) room.timer = setTimeout(() => endQuestion(room), room.settings.time * 1000 + 300);
 }
 function endQuestion(room) {
@@ -117,6 +122,7 @@ function resetGame(room) {
   room.status = 'lobby';
   room.cur = null;
   room.winners = [];
+  room.history = [];
   room.qNo = 0;
   for (const p of room.players.values()) {
     p.board = newBoard();
@@ -149,6 +155,30 @@ function questionView(room, withAnswer) {
     answer: withAnswer ? q.w : null,
   };
 }
+// 오답 노트: 틀렸거나 답하지 못한 문제. 정답이 담기므로 게임이 끝난 뒤에만 보냅니다.
+function notesFor(room, p) {
+  if (room.status !== 'over') return null;
+  return room.history
+    .filter((h) => h.pids.has(p.id) && h.answers.get(p.id) !== 'correct')
+    .map((h) => {
+      const q = WORDS[h.id];
+      return { word: q.w, chosung: q.c, desc: q.d, topic: q.t, mine: h.texts.get(p.id) || null };
+    });
+}
+// 반 전체가 가장 많이 틀린 단어 (선생님 복습용)
+function hardest(room) {
+  if (room.status !== 'over') return null;
+  return room.history
+    .filter((h) => h.pids.size)
+    .map((h) => {
+      let correct = 0;
+      for (const id of h.pids) if (h.answers.get(id) === 'correct') correct++;
+      return { word: WORDS[h.id].w, desc: WORDS[h.id].d, correct, total: h.pids.size };
+    })
+    .sort((a, b) => a.correct / a.total - b.correct / b.total)
+    .slice(0, 5);
+}
+
 function hostView(room) {
   const showAnswer = room.status !== 'question';
   let correct = 0, wrong = 0;
@@ -164,6 +194,7 @@ function hostView(room) {
     stats: { correct, wrong, players: room.players.size },
     players: ranking(room).map((r) => ({ ...r, ans: room.cur ? room.cur.answers.get(r.id) || null : null })),
     winners: room.winners,
+    hardest: hardest(room),
     podium: PODIUM,
   };
 }
@@ -192,6 +223,8 @@ function playerView(room, p) {
     players: room.players.size,
     top: rank.slice(0, 5).map((r) => ({ name: r.name, lines: r.lines, marks: r.marks, correct: r.correct, place: r.place })),
     winners: room.winners,
+    notes: notesFor(room, p),
+    asked: room.history.filter((h) => h.pids.has(p.id)).length,
     podium: PODIUM,
   };
 }
@@ -298,6 +331,7 @@ async function api(req, res, url) {
     const q = WORDS[room.cur.id];
     const ok = isCorrect(q, body.text);
     room.cur.answers.set(pl.id, ok ? 'correct' : 'wrong');
+    if (!ok) room.cur.texts.set(pl.id, String(body.text).trim().slice(0, 30));
     let onBoard = false, newLines = 0, won = false;
     if (ok) {
       pl.correct++;

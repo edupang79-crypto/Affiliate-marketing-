@@ -26,6 +26,13 @@
 .go:disabled{opacity:.4}
 .result{margin-top:12px;text-align:center;font-weight:900;font-size:20px;min-height:1.3em}
 .board-wrap{margin-top:14px}
+#notes{margin-top:14px}
+.note{background:var(--bg2);border-radius:14px;padding:14px;margin-top:10px;border-left:5px solid var(--bad)}
+.note .w{font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--accent)}
+.note .c{color:var(--muted);font-size:14px;margin-left:8px;letter-spacing:2px}
+.note .d{margin-top:6px;line-height:1.5;font-weight:700}
+.note .m{margin-top:6px;font-size:14px;color:var(--bad)}
+.note .t{font-size:12px;color:#c7ccff}
 .board-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .rank-mini{margin-top:14px;font-size:14px}
 .rank-mini li{padding:6px 10px}
@@ -92,6 +99,12 @@
       <div class="result" id="result"></div>
     </div>
 
+    <div class="panel hidden" id="notes">
+      <div class="tf" style="font-size:26px">📝 오답 노트</div>
+      <div class="muted" id="notesSub" style="font-size:14px;margin-top:4px"></div>
+      <div id="notesList"></div>
+    </div>
+
     <div class="board-wrap">
       <div class="board-head">
         <span class="tf" style="font-size:20px">내 빙고판</span>
@@ -108,6 +121,7 @@
     <div class="win-name" id="winName"></div>
     <div class="muted" id="winSub"></div>
     <ol class="rank-list rank-mini" id="winRank"></ol>
+    <button class="big-btn hidden" style="margin-bottom:10px;font-size:22px" id="notesBtn">📝 오답 노트 보기</button>
     <button class="btn primary" style="width:100%" id="closeWin">내 빙고판 보기</button>
   </div>
 </div>
@@ -189,6 +203,7 @@ function render(s){
   const asking = s.status==='question';
   $('waitBox').classList.toggle('hidden', !!q && s.status!=='lobby');
   $('qcard').classList.toggle('hidden', !q || s.status==='lobby');
+  if(!$('notes').classList.contains('hidden')) $('qcard').classList.add('hidden'); // 오답 노트를 보는 중
   if(s.status==='lobby'){
     $('waitText').textContent = '입장 완료! 선생님이 시작하면 문제가 나와요';
   }
@@ -264,7 +279,7 @@ function topList(s){
   $('winRank').innerHTML = s.top.map((p,i)=>`<li><span>${p.place?MEDAL[p.place]:i+1+'.'} ${esc(p.name)}</span><span>${p.lines}줄 · 정답 ${p.correct}</span></li>`).join('');
 }
 function renderWinner(s, prev){
-  if(s.status==='lobby'){ $('winner').classList.add('hidden'); shownWin=null; FX.stopMusic(); return; }
+  if(s.status==='lobby'){ $('winner').classList.add('hidden'); $('notes').classList.add('hidden'); $('notesBtn').classList.add('hidden'); shownWin=null; FX.stopMusic(); return; }
   const before = prev ? prev.winners : s.winners; // 새로고침 직후에는 지난 시상을 다시 띄우지 않습니다
   const fresh = s.winners.filter(w=>!before.some(x=>x.id===w.id));
 
@@ -293,11 +308,35 @@ function renderWinner(s, prev){
   $('closeWin').textContent = '내 빙고판 보기';
   $('winIcon').textContent = s.me.place ? MEDAL[s.me.place] : '🏁';
   $('winName').textContent = s.me.place ? `최종 ${s.me.place}등!` : '수고했어요!';
-  $('winSub').textContent = `나는 ${s.me.rank}등 · ${s.me.lines}줄 · ${s.q ? s.q.no : 0}문제 중 ${s.me.correct}개 정답`;
+  $('winSub').textContent = `나는 ${s.me.rank}등 · ${s.me.lines}줄 · ${s.asked}문제 중 ${s.me.correct}개 정답`;
+  renderNotes(s);
   $('winner').classList.remove('hidden');
   FX.fireworks(4);
 }
 $('closeWin').onclick = ()=> $('winner').classList.add('hidden');
+
+// 게임이 끝나면 서버가 내 오답(틀렸거나 못 푼 문제)을 보내 줍니다
+function renderNotes(s){
+  const notes = s.notes || [];
+  $('notesBtn').classList.remove('hidden');
+  $('notesBtn').textContent = notes.length ? `📝 오답 노트 보기 (${notes.length}개)` : '📝 오답 노트: 다 맞혔어요! 🎉';
+  $('notesSub').textContent = notes.length
+    ? `${s.asked}문제 중 ${notes.length}개를 놓쳤어요. 초성과 설명을 보며 다시 외워 봐요`
+    : `${s.asked}문제를 모두 맞혔어요. 완벽해요! 🎉`;
+  $('notesList').innerHTML = notes.map(n=>`
+    <div class="note">
+      <div class="t">${esc(n.topic)}</div>
+      <div><span class="w">${esc(n.word)}</span><span class="c">${esc(n.chosung)}</span></div>
+      <div class="d">${esc(n.desc)}</div>
+      <div class="m">${n.mine ? `내가 쓴 답: ${esc(n.mine)}` : '답하지 못했어요'}</div>
+    </div>`).join('');
+}
+$('notesBtn').onclick = ()=>{
+  $('winner').classList.add('hidden');
+  $('notes').classList.remove('hidden');
+  $('qcard').classList.add('hidden');
+  $('notes').scrollIntoView({behavior:'smooth'});
+};
 $('soundBtn').onclick = ()=>{ FX.soundOn = !FX.soundOn; $('soundBtn').textContent = FX.soundOn?'🔊':'🔇'; };
 </script>
 </body>
